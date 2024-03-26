@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 import pytz
 
 # Pushover Parameters
-pushover_user_key = os.getenv('PUSHOVER_USER_KEY')
-pushover_api_token = os.getenv('PUSHOVER_API_TOKEN')
+pushover_user_key = os.getenv('S_RDTD_PUSHOVER_USER_KEY')
+pushover_api_token = os.getenv('S_RDTD_PUSHOVER_API_TOKEN')
 influxdb_url = os.getenv('INFLUXDB_URL')
-influxdb_token = os.getenv('INFLUXDB_TOKEN')
+influxdb_token = os.getenv('S_RDTD_INFLUXDB_TOKEN')
 influxdb_org = os.getenv('INFLUXDB_ORG')
-influxdb_bucket = os.getenv('INFLUXDB_BUCKET')
+influxdb_bucket = os.getenv('S_RDTD_INFLUXDB_BUCKET')
 measurement_name = 'ruuvitag'
 
 # Function to send Pushover notification
