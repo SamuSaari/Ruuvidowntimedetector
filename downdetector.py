@@ -1,11 +1,15 @@
 import requests
 import os
-from influxdb_client import InfluxDBClient, Point, WriteOptions
-from influxdb_client.client.write_api import SYNCHRONOUS
 from datetime import datetime, timedelta
-import pytz
+from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client.client.write_api import SYNCHRONOUS
+from pytz import timezone
 
-# Pushover Parameters
+# Set the timezone
+helsinki_tz = timezone('Europe/Helsinki')
+
+
+# Env variables
 pushover_user_key = os.getenv('S_RDTD_PUSHOVER_USER_KEY')
 pushover_api_token = os.getenv('S_RDTD_PUSHOVER_API_TOKEN')
 influxdb_url = os.getenv('INFLUXDB_URL')
@@ -58,21 +62,22 @@ for device_id in device_ids:
 
     if not result or not points:
         # No data for this device at all
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get the current time and format it as a string
+        now = datetime.now(helsinki_tz).strftime('%Y-%m-%d %H:%M:%S')  # Get the current time in Helsinki timezone and format it as a string
         message = f"No data points found for device {device_id} in the last {alert_threshold_minutes} minutes. Current time: {now}"
         messages.append(message)
     else:
         print(device_id + " has data points in the last " + str(alert_threshold_minutes) + " minutes.")
-
+        
 # If there are any messages, join them into a single string and send a notification
 if messages:
-    now = datetime.now()
+    now = datetime.now(helsinki_tz)
     last_notification_time = None
 
     # Try to read the time of the last notification from a file
     try:
         with open('last_notification_time.txt', 'r') as f:
-            last_notification_time = datetime.strptime(f.read(), '%Y-%m-%d %H:%M:%S')
+            last_notification_time_str = f.read().strip()  # Remove leading and trailing whitespace and newlines
+            last_notification_time = datetime.strptime(last_notification_time_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=helsinki_tz)
     except FileNotFoundError:
         pass  # It's okay if the file doesn't exist
 
@@ -80,7 +85,7 @@ if messages:
     data_found = any("has data points" in message for message in messages)
 
     # Only send a notification if enough time has passed since the last one, or if data was found
-    if data_found or last_notification_time is None or now - last_notification_time > timedelta(minutes=10):
+    if data_found or last_notification_time is None or now - last_notification_time > timedelta(minutes=60):
         message = "\n\n".join(messages)
         send_pushover_notification(message)
 
