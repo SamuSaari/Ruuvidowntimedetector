@@ -33,7 +33,7 @@ def send_pushover_notification(message):
         print("Failed to send notification.")
 
 # Connect to InfluxDB 2.x
-client = InfluxDBClient(url="https://influx.mittauslaskenta.com", token=influxdb_token, org=influxdb_org)
+client = InfluxDBClient(url=influxdb_url, token=influxdb_token, org=influxdb_org)
 query_api = client.query_api()
 
 
@@ -43,21 +43,28 @@ alert_threshold_minutes = 20  # Alert if no data in the last X minutes
 # Initialize an empty list to store messages
 messages = []
 
+
+
 for device_id in device_ids:
+    # Get the current time in your local timezone
+    now = datetime.now(timezone('Europe/Helsinki'))
+    # Calculate the start time
+    start_time = now - timedelta(minutes=alert_threshold_minutes)
+    start_time_str = start_time.isoformat()
+    now_str = now.isoformat()
     # Modify your query to include filtering for the current device_id
     query = f'''
-    from(bucket: "Ruuvi_Database")
-      |> range(start: -{alert_threshold_minutes}m)
-      |> filter(fn: (r) => r["_measurement"] == "ruuvitag")
-      |> filter(fn: (r) => r["_field"] == "temperature")
-      |> filter(fn: (r) => r["deviceID"] == "{device_id}")
-      |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
-      |> yield(name: "mean")
+    from(bucket: "{influxdb_bucket}")
+    |> range(start: {start_time_str}, stop: {now_str})
+    |> filter(fn: (r) => r["_measurement"] == "{measurement_name}")
+    |> filter(fn: (r) => r["_field"] == "temperature")
+    |> filter(fn: (r) => r["deviceID"] == "{device_id}")
     '''
+    print(f"Executing query: {query}")  # Print the query for debugging
 
     result = query_api.query(query)
 
-    # Assuming the latest point is what we're interested in
+     # Assuming the latest point is what we're interested in
     points = [point for table in result for point in table.records]
 
     if not result or not points:
